@@ -9,6 +9,7 @@ namespace Meets.WebApi
         public DbSet<MeetupEntity> Meetups { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options) =>
-            options.UseNpgsql("Server=localhost;Port=5432;Database=asp_courses;User Id=khmelev_to;Password=44DfhPfbGjp>dt");
+            options.UseNpgsql("Server=localhost;Port=5432;Database=asp_courses;User Id=user;Password=password");
+
     }
 }
