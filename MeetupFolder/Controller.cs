@@ -1,6 +1,7 @@
 ﻿using Meets.WebApi.MeetupFolder;
 using Microsoft.AspNetCore.Components.Web.Virtualization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Net.Mime;
 
 namespace Meets.WebApi.Controller
@@ -12,8 +13,10 @@ namespace Meets.WebApi.Controller
 
     public class MeetupController : ControllerBase
     {
-        private static readonly ICollection<Meetup> Meetups =
-            new List<Meetup>();
+      //  private static readonly ICollection<MeetupEntity> Meetups =
+       //     new List<MeetupEntity>();
+
+        private readonly DatabaseContext _context = new();
 
 
         /// <summary>Post meetup</summary>
@@ -22,16 +25,18 @@ namespace Meets.WebApi.Controller
         [HttpPost]
         [ProducesResponseType(typeof(CreateMeetupDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult CreateMeetup([FromBody] CreateMeetupDto createDto)
+        public async Task<IActionResult> CreateMeetup([FromBody] CreateMeetupDto createDto)
         {
-            var newMeetup = new Meetup
+            var newMeetup = new MeetupEntity
             {
                 Id = Guid.NewGuid(),
                 Topic = createDto.Topic,
                 Place = createDto.Place,
                 Duration = createDto.Duration
             };
-            Meetups.Add(newMeetup);
+
+            _context.Meetups.Add(newMeetup);
+            await _context.SaveChangesAsync();
 
             var readDto = new ReadMeetupDto
             {
@@ -50,16 +55,17 @@ namespace Meets.WebApi.Controller
         [HttpGet]
         [ProducesResponseType(typeof(ReadMeetupDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult GetAllMeetups()
+        public async Task<IActionResult> GetAllMeetups()
         {
-            var readDtos = Meetups.Select(meetup => new ReadMeetupDto
+            var meetups = await _context.Meetups.ToListAsync();
+
+            var readDtos = meetups.Select(meetup => new ReadMeetupDto
             {
                 Id = meetup.Id,
                 Topic = meetup.Topic,
                 Place = meetup.Place,
                 Duration = meetup.Duration
             });
-
             return Ok(readDtos);
         }
         /// <summary>Put meetup</summary>
@@ -69,9 +75,9 @@ namespace Meets.WebApi.Controller
         [HttpPut("{id:guid}")]
         [ProducesResponseType(typeof(UpdateMeetupDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult UpdateMeetup([FromRoute] Guid id, [FromBody] UpdateMeetupDto updateDto)
+        public async Task<IActionResult> UpdateMeetup([FromRoute] Guid id, [FromBody] UpdateMeetupDto updateDto)
         {
-            var oldMeetup = Meetups.SingleOrDefault(meetup => meetup.Id == id);
+            var oldMeetup = await _context.Meetups.SingleOrDefaultAsync(meetup => meetup.Id == id);
             if (oldMeetup is null)
             {
                 return NotFound();
@@ -80,6 +86,8 @@ namespace Meets.WebApi.Controller
             oldMeetup.Topic = updateDto.Topic;
             oldMeetup.Place = updateDto.Place;
             oldMeetup.Duration = updateDto.Duration;
+            await _context.SaveChangesAsync();
+
             return NoContent();
         }
 
@@ -92,14 +100,16 @@ namespace Meets.WebApi.Controller
         [HttpDelete("{id:guid}")]
         [ProducesResponseType(typeof(ReadMeetupDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult DeleteMeetup([FromRoute] Guid id)
+        public async Task<IActionResult> DeleteMeetup([FromRoute] Guid id)
         {
-            var meetupToDelete = Meetups.SingleOrDefault(meetup => meetup.Id == id);
+            var meetupToDelete = await _context.Meetups.SingleOrDefaultAsync(meetup => meetup.Id == id);
             if (meetupToDelete is null)
             {
                 return NotFound();
             }
-            Meetups.Remove(meetupToDelete);
+
+            _context.Meetups.Remove(meetupToDelete);
+            await _context.SaveChangesAsync();
 
             var readDto = new ReadMeetupDto
             {
